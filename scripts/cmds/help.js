@@ -134,7 +134,7 @@ module.exports = {
                 });
                 
                 if (commandsInCategory.length > 5) {
-                    commandList += `• ...${commandsInCategory.length - 5} more commands\n`;
+                    commandList += `💕 ...${commandsInCategory.length - 5} more commands\n`;
                 }
                 
                 commandList += "\n";
@@ -259,7 +259,7 @@ module.exports = {
         
         // Draw main header
         ctx.font = 'bold 32px Orbitron, Arial';
-        const titleText = '🤖 VOLDIGO⚡BOT SYSTEM INFO';
+        const titleText = '🤖 ARYAN⚡BOT SYSTEM INFO';
         
         // Text shadow
         ctx.fillStyle = 'rgba(0, 200, 255, 0.5)';
