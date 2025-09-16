@@ -42,8 +42,8 @@ module.exports = {
       const prompt = event.body.substring(prefix.length).trim();
       if (!prompt) {
         await message.reply("");
-api.sendMessage({ sticker: "387545578037993" }, event.threadID);
-api.sendMessage("🟢 𝗛𝖾𝗅𝗅𝗈 JE PEUX FAIRE QUOI POUR TOI AJOURD'HUI🫡🫡⁉️" , event.threadID);
+api.sendMessage({ sticker: "782389417841815" }, event.threadID);
+api.sendMessage("🍓 𝒀𝒐 𝒒𝒖𝒐𝒊 𝒅𝒆 𝒏𝒆𝒖𝒇 𝒂𝒖𝒋𝒐𝒖𝒓𝒅'𝒉𝒖𝒊⁉️" , event.threadID);
 api.setMessageReaction("🟡", event.messageID, () => {}, true);
         return;
       }
