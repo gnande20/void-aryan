@@ -3,73 +3,77 @@ const axios = require("axios");
 module.exports = {
   config: {
     name: "ai",
-    version: "1.0.0",
+    aliases: ["gpt"],
+    version: "1.4",
     author: "Aryan Chauhan",
-    countDown: 5,
+    countDown: 0,
     role: 0,
-    shortDescription: { en: "Chat with AI (asi1-mini)" },
-    longDescription: { en: "Talk with AI using asi1-mini model. Works with both prefix command and normal chat 'ai <message>' plus continuous replies." },
+    shortDescription: { en: "Chat with LLaMA-4 Maverick AI" },
+    longDescription: { en: "Chat with LLaMA-4 Maverick 17B-128E Instruct model with image support" },
     category: "ai",
-    guide: { en: "{p}ai <message>\nOR just type: ai <message>\nThen reply to continue the chat." }
+    guide: { en: "{p}ai <message> (+ optional image or reply to image)" }
   },
 
-  onStart: async function ({ api, event, args }) {
-    const prompt = args.join(" ").trim();
-    if (!prompt) return api.sendMessage("⚠️ Please provide a message.", event.threadID, event.messageID);
-
-    await handleChat(api, event, prompt);
+  onStart: async ({ api, event, args }) => {
+    const q = args.join(" ").trim();
+    const img = getImg(event);
+    if (!q && !img) return api.sendMessage("⚠️ Enter a prompt or attach/reply to an image.", event.threadID, event.messageID);
+    chat(api, event, q, img);
   },
 
-  onChat: async function ({ api, event }) {
-    const body = event.body?.trim();
-    if (!body) return;
-
-    if (body.toLowerCase().startsWith("ai ")) {
-      const prompt = body.slice(3).trim();
-      if (prompt) await handleChat(api, event, prompt);
-    }
+  onReply: async ({ api, event, Reply }) => {
+    if (event.senderID !== Reply.author) return;
+    const q = (event.body || "").trim();
+    const img = getImg(event);
+    if (!q && !img) return api.sendMessage("⚠️ Please reply with text or an image.", event.threadID, event.messageID);
+    chat(api, event, q, img);
   },
 
-  onReply: async function ({ api, event, Reply }) {
-    if (event.type !== "message_reply") return;
-    if (event.messageReply?.messageID !== Reply.messageID) return;
-
-    const prompt = event.body?.trim();
-    if (!prompt) return;
-
-    await handleChat(api, event, prompt, true);
+  onChat: async ({ api, event }) => {
+    const msg = (event.body || "").trim();
+    if (!/^ai\s+/i.test(msg) && !/^gpt\s+/i.test(msg)) return;
+    const q = msg.replace(/^(ai|gpt)\s+/i, "").trim();
+    const img = getImg(event);
+    if (!q && !img) return;
+    chat(api, event, q, img);
   }
 };
 
-async function handleChat(api, event, prompt, isReply = false) {
-  api.setMessageReaction("⏳", event.messageID, () => {}, true);
+function getImg(e) {
+  const pick = att => att && (att.url || att.previewUrl || att.image || att.src || att.data?.url || "");
+  if (e.attachments?.length) return pick(e.attachments[0]);
+  if (e.messageReply?.attachments?.length) return pick(e.messageReply.attachments[0]);
+  return "";
+}
 
+async function chat(api, e, q, url) {
+  api.setMessageReaction("⏳", e.messageID, () => {}, true);
   try {
-    const { data } = await axios.get("https://aryxapi.onrender.com/api/ai/heurist/pondera", {
-      params: {
-        action: "chat",
-        message: prompt,
-        modelId: "asi1-mini"
-      }
+    const r = await axios.get("https://aryanapi.up.railway.app/api/llama-4-maverick-17b-128e-instruct", {
+      params: { uid: e.senderID, prompt: q, url },
+      timeout: 45000
     });
 
-    const text = data?.result || "❌ No response from AI.";
+    const reply = r.data?.reply;
+    if (!reply) {
+      api.sendMessage("❌ AI returned no reply.", e.threadID, () => {
+        api.setMessageReaction("❌", e.messageID, () => {}, true);
+      }, e.messageID);
+      return;
+    }
 
-    api.sendMessage(text, event.threadID, (err, info) => {
-      if (err) api.setMessageReaction("❌", event.messageID, () => {}, true);
-      else {
-        api.setMessageReaction("✅", event.messageID, () => {}, true);
-
-global.GoatBot.onReply.set(info.messageID, {
-          commandName: "ai",
-          messageID: info.messageID
-        });
-      }
-    }, event.messageID);
+    api.sendMessage(reply, e.threadID, (err, info) => {
+      if (err) return api.setMessageReaction("❌", e.messageID, () => {}, true);
+      api.setMessageReaction("✅", e.messageID, () => {}, true);
+      try {
+        global.GoatBot.onReply.set(info.messageID, { commandName: "ai", author: e.senderID });
+      } catch {}
+    }, e.messageID);
 
   } catch (err) {
-    console.error(err);
-    api.setMessageReaction("❌", event.messageID, () => {}, true);
-    api.sendMessage("❌ Error while contacting AI API.", event.threadID, event.messageID);
+    console.error("AI error:", err?.message || err);
+    api.sendMessage("❌ Error from AI.", e.threadID, () => {
+      api.setMessageReaction("❌", e.messageID, () => {}, true);
+    }, e.messageID);
   }
-}
+      }
