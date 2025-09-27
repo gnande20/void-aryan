@@ -5,13 +5,13 @@ const path = require("path");
 module.exports = {
   config: {
     name: "lyrics",
-    version: "1.1",
+    version: "1.2",
     author: "Aryan Chauhan",
     countDown: 5,
     role: 0,
     shortDescription: "Fetch lyrics of a song",
-    longDescription: "Get detailed song lyrics with title, artist, release date, and cover art using AryanAPI.",
-    category: "music",
+    longDescription: "Get detailed song lyrics with title, artist, and cover art.",
+    category: "search",
     guide: {
       en: "{pn} <song name>\nExample: {pn} apt"
     }
@@ -29,24 +29,24 @@ module.exports = {
 
     try {
       const { data } = await axios.get(
-        `https://aryapio.onrender.com/search/lirik?query=${encodeURIComponent(query)}&apikey=aryan123`
+        `https://lyricstx.vercel.app/youtube/lyrics?title=${encodeURIComponent(query)}`
       );
 
-      if (!data?.status || !data?.data) {
+      if (!data?.lyrics) {
         return api.sendMessage("❌ Lyrics not found.", event.threadID, event.messageID);
       }
 
-      const { artis, image, title, rilis, lirik } = data.data;
+      const { artist_name, track_name, artwork_url, lyrics } = data;
 
       const imgPath = path.join(__dirname, "lyrics.jpg");
-      const imgResp = await axios.get(image, { responseType: "stream" });
+      const imgResp = await axios.get(artwork_url, { responseType: "stream" });
       const writer = fs.createWriteStream(imgPath);
       imgResp.data.pipe(writer);
 
       writer.on("finish", () => {
         api.sendMessage(
           {
-            body: `🎼 *${title}*\n👤 Artist: ${artis}\n📅 Released: ${rilis}\n\n${lirik}`,
+            body: `🎼 ${track_name}\n👤 Artist: ${artist_name}\n\n${lyrics}`,
             attachment: fs.createReadStream(imgPath)
           },
           event.threadID,
@@ -57,7 +57,7 @@ module.exports = {
 
       writer.on("error", () => {
         api.sendMessage(
-          `🎼 *${title}*\n👤 Artist: ${artis}\n📅 Released: ${rilis}\n\n${lirik}`,
+          `🎼 ${track_name}\n👤 Artist: ${artist_name}\n\n${lyrics}`,
           event.threadID,
           event.messageID
         );
